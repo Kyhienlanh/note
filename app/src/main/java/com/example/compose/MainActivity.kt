@@ -11,12 +11,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.compose.ui.theme.ComposeTheme
-import com.example.compose.ui.theme.DarkColorScheme
-import com.example.compose.ui.theme.LightColorScheme
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -31,10 +31,11 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun NoteApp() {
-    var isDarkTheme by remember { mutableStateOf(false) } // Trạng thái chế độ tối
+    var isDarkTheme by remember { mutableStateOf(false) }
     val notes = remember { mutableStateListOf<Note>() }
     var showDialog by remember { mutableStateOf(false) }
     var nextId by remember { mutableIntStateOf(1) }
+    var noteToDelete by remember { mutableStateOf<Note?>(null) }
 
     // Mở hộp thoại khi nhấn FloatingActionButton
     if (showDialog) {
@@ -45,6 +46,28 @@ fun NoteApp() {
             }
             showDialog = false
         }
+    }
+
+    // Hộp thoại xác nhận xóa
+    noteToDelete?.let { note ->
+        AlertDialog(
+            onDismissRequest = { noteToDelete = null },
+            title = { Text("Xóa ghi chú") },
+            text = { Text("Bạn có chắc chắn muốn xóa ghi chú này không?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    notes.remove(note)
+                    noteToDelete = null
+                }) {
+                    Text("Xóa")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { noteToDelete = null }) {
+                    Text("Hủy")
+                }
+            }
+        )
     }
 
     // Sử dụng ComposeTheme với trạng thái chế độ tối
@@ -81,9 +104,9 @@ fun NoteApp() {
                     modifier = Modifier.fillMaxSize()
                 ) {
                     items(notes, key = { note -> note.id }) { note ->
-                        SwipeToDismissNoteCard(note, onDismiss = {
-                            notes.remove(note)
-                        })
+                        NoteCard(note) {
+                            noteToDelete = note // Lưu ghi chú muốn xóa
+                        }
                     }
                 }
             }
@@ -133,45 +156,34 @@ fun NoteDialog(onDismiss: () -> Unit, onSave: (String, String) -> Unit) {
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SwipeToDismissNoteCard(note: Note, onDismiss: () -> Unit) {
-    val dismissState = rememberDismissState(DismissValue.Default)
+fun NoteCard(note: Note, onDelete: () -> Unit) {
+    var isLongPress by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
 
-    val updatedOnDismiss by rememberUpdatedState(onDismiss)
-
-    LaunchedEffect(dismissState) {
-        if (dismissState.isDismissed(DismissDirection.StartToEnd)) {
-            updatedOnDismiss()
-            delay(200)
-            dismissState.snapTo(DismissValue.Default)
-        }
-    }
-
-    SwipeToDismiss(
-        state = dismissState,
-        background = {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(8.dp),
-                contentAlignment = Alignment.CenterStart
-            ) {
-                Text("Xóa", color = Color.White)
-            }
-        },
-        dismissContent = {
-            NoteCard(note)
-        }
-    )
-}
-
-@Composable
-fun NoteCard(note: Note) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(8.dp),
+            .padding(8.dp)
+            .pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        if (event.changes.any { it.pressed }) {
+                            // Bắt đầu đồng hồ đếm 1 giây
+                            isLongPress = true
+                            coroutineScope.launch {
+                                delay(1000) // Đợi 1 giây
+                                if (isLongPress) {
+                                    onDelete() // Gọi hàm xóa nếu vẫn còn nhấn giữ
+                                }
+                            }
+                        } else {
+                            isLongPress = false // Khôi phục trạng thái khi nhả tay
+                        }
+                    }
+                }
+            },
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
@@ -192,5 +204,3 @@ fun NoteCard(note: Note) {
         }
     }
 }
-
-

@@ -59,7 +59,7 @@ dependencies {
     // Chỉ giữ lại Material 3
     implementation(libs.androidx.material3)
 
-    // Các thư viện Compose
+    // Các thư viện Composeaa
     implementation("androidx.compose.ui:ui") // UI
     implementation("androidx.compose.ui:ui-tooling-preview") // Công cụ xem trước
 

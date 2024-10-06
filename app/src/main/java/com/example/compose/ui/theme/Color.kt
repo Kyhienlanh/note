@@ -17,12 +17,12 @@ val LightColorScheme = lightColorScheme(
 )
 
 val DarkColorScheme = darkColorScheme(
-    primary = Color(0xFFBB86FC),
+    primary = Color(0xFF262A3A),
     onPrimary = Color.Black,
     secondary = Color(0xFF03DAC5),
     onSecondary = Color.White,
-    background = Color(0xFF391A72),
-    surface = Color(0xFF121212),
+    background = Color(0xFF0F0D11),
+    surface = Color(0xFF1C2350),
     onBackground = Color.White,
     onSurface = Color.White,
 )
